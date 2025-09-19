@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auto Search & Visit</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
+      width: 320px;
+      background-color: #f9f9f9;
+      color: #222;
+    }
+    h2 {
+      margin: 0 0 16px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    button {
+      flex: 1;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #startBtn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    #stopBtn {
+      background-color: #f44336;
+      color: white;
+    }
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .running {
+      background-color: #e0f7e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    .stopped {
+      background-color: #fdecea;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+    .info {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .info div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .label {
+      color: #555;
+    }
+    .value {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>ZapReq</h2>
+
+  <div class="buttons">
+    <button id="startBtn">Старт</button>
+    <button id="stopBtn">Стоп</button>
+  </div>
+
+  <div id="status" class="status stopped">Остановлено</div>
+
+  <div class="info">
+    <div><span class="label">Последний запрос:</span><span class="value" id="lastQuery">—</span></div>
+    <div><span class="label">Регион:</span><span class="value" id="region">—</span></div>
+    <div><span class="label">Посещено сайтов:</span><span class="value" id="visits">0</span></div>
+    <div><span class="label">Время работы:</span><span class="value" id="runtime">0 мин</span></div>
+    <div><span class="label">Осталось:</span><span class="value" id="remaining">0 мин</span></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

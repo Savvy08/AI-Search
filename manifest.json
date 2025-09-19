@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ZapReq",
+  "version": "1.2.0",
+  "description": "Автопоиск и визиты на сайты с учётом региона по IP. Цикл 4 мин, сессия 30 мин, запись в Google Таблицу.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.google.com/*",
+    "https://www.google.kz/*",
+    "https://ipapi.co/*",
+    "https://api.ipify.org/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://script.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ZapReq"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.google.com/search*",
+        "https://www.google.kz/search*"
+      ],
+      "js": ["content-google.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
