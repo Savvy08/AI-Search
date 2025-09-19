@@ -1,5 +1,8 @@
 # ZapReq
 
+<img width="300" height="300" alt="icon128" src="https://github.com/user-attachments/assets/397905f6-c63b-4907-870b-f799accbdc43" />
+
+
 ### EN
 Generates search queries via Gemini API based on the user's region (city, country by IP) Opens a Google search with this query — every 2 minutes, in a new tab, the Content script goes to the first organic site - automatically, Waits 2 minutes on the site without clicking — then starts the next cycle, the cycle lasts up to 30 minutes — after which the extension automatically shuts down Records statistics in the Google Spreadsheet — IP, region, number visits, opening hours Show the status in the interface (popup.html ) — current query, region, timer, number of visits
 
