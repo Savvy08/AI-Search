@@ -4,7 +4,24 @@
 
 
 ### EN
-Generates search queries via Gemini API based on the user's region (city, country by IP) Opens a Google search with this query — every 2 minutes, in a new tab, the Content script goes to the first organic site - automatically, Waits 2 minutes on the site without clicking — then starts the next cycle, the cycle lasts up to 30 minutes — after which the extension automatically shuts down Records statistics in the Google Spreadsheet — IP, region, number visits, opening hours Show the status in the interface (popup.html ) — current query, region, timer, number of visits
+This browser extension automates a search cycle to simulate user activity. It performs the following actions:
+Query Generation: Utilizes the Gemini API to generate relevant search queries based on the user's geographical region (determined by IP address).
+Automated Browsing: Executes a search cycle every 2 minutes:
+Opens a Google search with the generated query in a new tab.
+The content script automatically navigates to the first organic result.
+Remains on the site for 2 minutes without interaction.
+Session Management: The extension runs for a maximum of 30 minutes per session before automatically shutting down.
+Statistics & Logging: Records all activity to a Google Spreadsheet, including IP address, region, number of visits, and session duration.
+Status Interface: Displays real-time status information in the popup (popup.html), such as the current search query, region, session timer, and visit count.
 
 ### RU
-Генерирует поисковые запросы через Gemini API на основе региона пользователя (город, страна по IP), Открывает поиск в Google по этому запросу — каждые 2 минуты в новой вкладке Контент-скрипт переходит на первый обычный сайт — автоматически, ждет 2 минуты на сайте, не нажимая - затем запускает поисковую систему. следующий цикл, цикл длится до 30 минут — после чего расширение автоматически отключается, записывает статистику в электронную таблицу Google — IP, регион, количество посещений, часы работы, показывает статус в интерфейсе (popup.html ) — текущий запрос, регион, таймер, количество посещений
+Данное расширение для браузера автоматизирует поисковые циклы для имитации пользовательской активности. Функционал включает:
+Генерация запросов: Использует Gemini API для создания релевантных поисковых запросов на основе региона пользователя (определяется по IP-адресу).
+Автоматизированный просмотр: Выполняет цикл поиска каждые 2 минуты:
+Открывает поиск Google с созданным запросом в новой вкладке.
+Контент-скрипт автоматически переходит на первый органический результат в выдаче.
+Ожидает на сайте в течение 2 минут без совершения действий.
+Управление сеансом: Работа расширения ограничена сессией в 30 минут, по истечении которых оно автоматически отключается.
+Статистика и логирование: Записывает статистику в Google Таблицу, включая IP-адрес, регион, количество визитов и время работы.
+Интерфейс статуса: Отображает текущую информацию в popup-окне (popup.html): активный поисковый запрос, регион, таймер сессии и счетчик посещений.
+
