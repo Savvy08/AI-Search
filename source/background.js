@@ -1,5 +1,5 @@
 const API_KEY = "AIzaSyBwNHhBC7IKitdpn6iwY9hzje1FOSmU9Gg";
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzGfqsSPFb3rMIaYVMdU806zAtsAYQ84QHpGPE71MvHxuFHkcningJ3LJqhhNNUsFcJ/exec";
+const GOOGLE_SHEET_URL = "Сюда ссылку на Google Таблицу";
 const DWELL_MINUTES = 2;
 const SESSION_MINUTES = 30;
 
