@@ -5,6 +5,8 @@ const lastQueryEl = document.getElementById('lastQuery');
 const visitCountEl = document.getElementById('visitCount');
 const timeLeftEl = document.getElementById('timeLeft');
 const testModeChk = document.getElementById('testModeChk');
+const deepseekChk = document.getElementById('deepseekChk');
+const aiLabel = document.getElementById('aiLabel');
 
 startBtn.addEventListener('click', () => {
   chrome.runtime.sendMessage({ type: "START" }, () => updateState());
@@ -14,6 +16,11 @@ stopBtn.addEventListener('click', () => {
 });
 testModeChk.addEventListener('change', () => {
   chrome.runtime.sendMessage({ type: "TOGGLE_TEST_MODE", value: testModeChk.checked }, () => updateState());
+});
+deepseekChk.addEventListener('change', () => {
+  const model = deepseekChk.checked ? "deepseek" : "google";
+  aiLabel.textContent = deepseekChk.checked ? "DeepSeek" : "Gemini";
+  chrome.runtime.sendMessage({ type: "SET_MODEL", value: model }, () => updateState());
 });
 
 function msToTime(ms) {
@@ -34,6 +41,8 @@ function updateState() {
     const left = st.sessionEndsAt ? Math.max(0, st.sessionEndsAt - Date.now()) : 0;
     timeLeftEl.textContent = msToTime(left);
     testModeChk.checked = !!st.testMode;
+    deepseekChk.checked = (st.model === "deepseek");
+    aiLabel.textContent = st.model === "deepseek" ? "DeepSeek" : "Gemini";
   });
 }
 
