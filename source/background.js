@@ -1,4 +1,4 @@
-const API_KEY = "AIzaSyBwNHhBC7IKitdpn6iwY9hzje1FOSmU9Gg";
+const API_KEY = "Ключ Gemeni API";
 const GOOGLE_SHEET_URL = "Сюда ссылку на Google Таблицу";
 const DWELL_MINUTES = 2;
 const SESSION_MINUTES = 30;
