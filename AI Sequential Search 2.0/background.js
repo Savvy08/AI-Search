@@ -1,15 +1,43 @@
-// background.js — стабильная логика с setTimeout
+// --- модели и ключи ---
+const MODELS = {
+  google: {
+    name: "Google Gemini",
+    endpoint: (prompt) => ({
+      url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${MODELS.google.apiKey}`,
+      options: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      },
+      parse: (data) => data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
+    }),
+    apiKey: "Ключ GEMENI"
+  },
+  deepseek: {
+    name: "DeepSeek",
+    endpoint: (prompt) => ({
+      url: "https://api.deepseek.com/v1/chat/completions",
+      options: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${MODELS.deepseek.apiKey}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [{ role: "user", content: prompt }]
+        })
+      },
+      parse: (data) => data?.choices?.[0]?.message?.content || ""
+    }),
+    apiKey: "Ключ DeepSeek"
+  }
+};
 
-// background.js — стабильная логика с setTimeout
-
-// ключ от Google Gemini
-const API_KEY = "Ключ от Gemeni";
-const MODEL_ENDPOINT =
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
-
-const DWELL_MINUTES = 3;     // обычный режим
-const TEST_DWELL_SEC = 10;   // тест-режим
-const SESSION_MINUTES = 30;  // вся сессия
+// --- настройки времени ---
+const DWELL_MINUTES = 3;
+const TEST_DWELL_SEC = 10;
+const SESSION_MINUTES = 30;
 
 let state = {
   running: false,
@@ -19,9 +47,9 @@ let state = {
   currentTabId: null,
   visitCount: 0,
   visitedDomains: [],
-  lastQuery: ""
+  lastQuery: "",
+  model: "google" // по умолчанию Gemini
 };
-
 
 let dwellTimer = null;
 
@@ -34,26 +62,35 @@ async function loadState() {
 
 // --- генерация запроса ---
 async function generateQueryViaAI() {
-  const prompt = `Сгенерируй короткий поисковый запрос строго на русском языке (1–3 слова), без города или страны.
-Если тема — "погода", верни только "погода".
-Если тема — "снять квартиру", верни только "снять квартиру".
-Верни ровно один запрос без пояснений.`;
+  const prompt = `Ты — генератор поисковых запросов. 
+Сгенерируй один короткий поисковый запрос на русском языке. 
+Темы всегда разные: новости, спорт, наука, технологии, медицина, финансы, кулинария, путешествия, игры, кино, книги, история, культура, образование, музыка и многое другое. 
+Не добавляй пояснений, только сам запрос. 
+Формат ответа: только запрос, без кавычек и без дополнительных слов.`;
 
-  const body = { contents: [{ parts: [{ text: prompt }] }] };
-  const resp = await fetch(MODEL_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  const modelConf = MODELS[state.model];
+  if (!modelConf) throw new Error("unknown model");
+
+  const { url, options, parse } = modelConf.endpoint(prompt);
+  const resp = await fetch(url, options);
   const data = await resp.json();
-  let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  text = text.trim().split(/[.,;!]/)[0];
+
+  let text = parse(data) || "";
+  text = text.trim();
+
+  // если модель вернёт несколько строк — берём только первую
+  if (text.includes("\n")) text = text.split("\n")[0];
+
+  // убираем кавычки и лишние символы
+  text = text.replace(/^["'\-–\s]+|["'\-–\s]+$/g, "");
+
   if (!text || !/[А-Яа-яЁё]/.test(text)) throw new Error("bad query");
+
   return text;
 }
 
 function fallbackQuery() {
-  const arr = ["погода","снять квартиру","новости","работа","афиша","спорт","кино"];
+  const arr = ["погода сегодня", "снять квартиру москва", "новости спорта", "новые технологии", "рецепт борща", "лучшие фильмы 2023", "история древнего рима", "музыкальные новинки"];
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -63,7 +100,8 @@ async function generateQuery() {
     state.lastQuery = q;
     saveState();
     return q;
-  } catch {
+  } catch (err) {
+    log("Ошибка ИИ, fallback:", err);
     const q = fallbackQuery();
     state.lastQuery = q;
     saveState();
@@ -80,14 +118,14 @@ async function openSearchTab() {
   }
   const q = await generateQuery();
   const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
-  log("Query:", q);
+  log("Query:", q, "via", state.model);
   chrome.tabs.create({ url }, (tab) => {
     state.currentTabId = tab.id;
     saveState();
   });
 }
 
-// --- таймер dwell ---
+// --- dwell ---
 function startDwellTimer() {
   if (dwellTimer) clearTimeout(dwellTimer);
   const ms = state.testMode ? TEST_DWELL_SEC * 1000 : DWELL_MINUTES * 60 * 1000;
@@ -137,7 +175,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     saveState();
     sendResponse({ testMode: state.testMode });
   }
-
+  if (msg.type === "SET_MODEL") {
+    state.model = msg.value; // "google" или "deepseek"
+    saveState();
+    sendResponse({ model: state.model });
+  }
   if (msg.type === "ORGANIC_LINKS") {
     const links = msg.links || [];
     let chosen = null;
@@ -150,7 +192,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!chosen && links[0]) chosen = links[0];
     if (chosen) sendResponse({ action:"NAVIGATE", href: chosen.href });
   }
-
   if (msg.type === "WILL_NAVIGATE") {
     try {
       const u = new URL(msg.href);
