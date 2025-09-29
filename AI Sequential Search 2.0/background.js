@@ -3,7 +3,7 @@
 // background.js — стабильная логика с setTimeout
 
 // ключ от Google Gemini
-const API_KEY = "AIzaSyBXdWXgA61Pv64uBuKdcF8xnuf_fVmwS9o";
+const API_KEY = "Ключ от Gemeni";
 const MODEL_ENDPOINT =
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
