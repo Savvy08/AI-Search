@@ -1,4 +1,4 @@
-// --- модели и ключи ---
+// --- модели и ключи  ---
 const MODELS = {
   google: {
     name: "Google Gemini",
