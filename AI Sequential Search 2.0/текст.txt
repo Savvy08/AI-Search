@@ -1,0 +1,24 @@
+TYPE,CONTENT,DESCRIPTION,PRIORITY,INDENT,AUTHOR,RESPONSIBLE,DATE,DATE_LANG,TIMEZONE
+section,Неделя 1,,4,1,,,,,ru,Europe/Moscow
+task,JS: основы языка (переменные, циклы, функции),Основы JS,4,1,,,,2025-09-22,ru,Europe/Moscow
+task,JS: DOM, работа с элементами,Изучение DOM,4,1,,,,2025-09-23,ru,Europe/Moscow
+task,Python: основы языка (переменные, типы),Основы Python,4,1,,,,2025-09-24,ru,Europe/Moscow
+task,Python: циклы, функции,Функции и циклы,4,1,,,,2025-09-25,ru,Europe/Moscow
+
+section,Неделя 2,,4,1,,,,,ru,Europe/Moscow
+task,JS: структура расширений (manifest.json),Понимание структуры,4,1,,,,2025-09-29,ru,Europe/Moscow
+task,JS: первое расширение (фон страницы),Простое расширение,4,1,,,,2025-09-30,ru,Europe/Moscow
+task,Python: списки, словари,Работа с коллекциями,4,1,,,,2025-10-01,ru,Europe/Moscow
+task,Python: простой скрипт с requests,HTTP-запросы,4,1,,,,2025-10-02,ru,Europe/Moscow
+
+section,Неделя 3,,4,1,,,,,ru,Europe/Moscow
+task,JS: popup и background scripts,Скрипты расширения,4,1,,,,2025-10-06,ru,Europe/Moscow
+task,JS: заметки в расширении,UI + хранилище,4,1,,,,2025-10-07,ru,Europe/Moscow
+task,Python: работа с API,Интеграция,4,1,,,,2025-10-08,ru,Europe/Moscow
+task,Python: телеграм-бот,Практика бота,4,1,,,,2025-10-09,ru,Europe/Moscow
+
+section,Неделя 4,,4,1,,,,,ru,Europe/Moscow
+task,JS: стилизация и иконки,Стили и дизайн,4,1,,,,2025-10-13,ru,Europe/Moscow
+task,JS: собрать расширение,Финализация,4,1,,,,2025-10-14,ru,Europe/Moscow
+task,Python: ошибки и исключения,Обработка ошибок,4,1,,,,2025-10-15,ru,Europe/Moscow
+task,Python: парсер сайта,Парсинг контента,4,1,,,,2025-10-16,ru,Europe/Moscow
