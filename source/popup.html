@@ -1,94 +1,64 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Auto Search & Visit</title>
+  <meta charset="utf-8" />
+  <title>AI Sequential Search</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 16px;
-      width: 320px;
-      background-color: #f9f9f9;
-      color: #222;
-    }
-    h2 {
-      margin: 0 0 16px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .buttons {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    button {
-      flex: 1;
-      padding: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #startBtn {
-      background-color: #4CAF50;
-      color: white;
-    }
-    #stopBtn {
-      background-color: #f44336;
-      color: white;
-    }
-    .status {
-      padding: 8px;
-      border-radius: 4px;
-      font-weight: bold;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    .running {
-      background-color: #e0f7e9;
-      color: #2e7d32;
-      border: 1px solid #a5d6a7;
-    }
-    .stopped {
-      background-color: #fdecea;
-      color: #c62828;
-      border: 1px solid #ef9a9a;
-    }
-    .info {
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    .info div {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-    .label {
-      color: #555;
-    }
-    .value {
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; width: 360px; padding: 12px; color: #111; }
+    h2 { margin: 0 0 8px 0; font-size: 16px; }
+    .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+    button { padding:8px 12px; border-radius:6px; border:1px solid #aaa; background:#f7f7f7; cursor:pointer; }
+    button.primary { background:#2d8cff; color:#fff; border-color:#1c6fd6; }
+    .status { font-size:13px; margin-bottom:10px; }
+    .statbox { background:#f3f6ff; padding:8px; border-radius:6px; border:1px solid #e0e9ff; }
+    .meta { font-size:13px; margin-top:6px; }
+    .toggle { position: relative; display: inline-block; width: 46px; height: 22px; }
+    .toggle input { display:none; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2d8cff; }
+    input:checked + .slider:before { transform: translateX(24px); }
+    .ai-label { font-size: 13px; margin-left: 8px; }
+
+    /* Шестерёнка */
+    .settings-btn { border:none; background:none; cursor:pointer; padding:6px; display:inline-flex; align-items:center; justify-content:center; }
+    .settings-btn img { width:20px; height:20px; display:block; }
+
+    /* Немного подправим мобильную ширину кнопок */
+    .row .settings-wrap { margin-left: auto; }
   </style>
 </head>
 <body>
-  <h2>ZapReq</h2>
+  <h2>AI Sequential Search</h2>
+  <div class="row">
+    <button id="startBtn" class="primary">Start</button>
+    <button id="stopBtn">Stop</button>
 
-  <div class="buttons">
-    <button id="startBtn">Старт</button>
-    <button id="stopBtn">Стоп</button>
+    <!-- Шестерёнка: заменена на ссылку, указанную тобой -->
+    <div class="settings-wrap">
+      <button id="settingsBtn" class="settings-btn" title="Настройки" aria-label="Открыть настройки">
+        <img id="settingsImg" src="https://images.icon-icons.com/1580/PNG/512/2849830-gear-interface-multimedia-options-setting-settings_107986.png" alt="Настройки">
+      </button>
+    </div>
   </div>
 
-  <div id="status" class="status stopped">Остановлено</div>
+  <div class="row" style="margin-top:6px;">
+    <label><input type="checkbox" id="testModeChk"> Тест-режим (10 сек вместо 2 мин)</label>
+  </div>
 
-  <div class="info">
-    <div><span class="label">Последний запрос:</span><span class="value" id="lastQuery">—</span></div>
-    <div><span class="label">Регион:</span><span class="value" id="region">—</span></div>
-    <div><span class="label">Посещено сайтов:</span><span class="value" id="visits">0</span></div>
-    <div><span class="label">Время работы:</span><span class="value" id="runtime">0 мин</span></div>
-    <div><span class="label">Осталось:</span><span class="value" id="remaining">0 мин</span></div>
+  <div class="row">
+    <label class="toggle">
+      <input type="checkbox" id="openrouterChk">
+      <span class="slider"></span>
+    </label>
+    <span class="ai-label" id="aiLabel">Gemini</span>
+  </div>
+
+  <div class="status">Статус: <strong id="running">Остановлен</strong></div>
+  <div class="statbox">
+    <div class="meta">Последний запрос: <span id="lastQuery">—</span></div>
+    <div class="meta">Посещений: <span id="visitCount">0</span></div>
+    <div class="meta">Оставшееся время: <span id="timeLeft">00:00</span></div>
   </div>
 
   <script src="popup.js"></script>
