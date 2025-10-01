@@ -1,60 +1,76 @@
-const els = {
-  status: document.getElementById("status"),
-  lastQuery: document.getElementById("lastQuery"),
-  region: document.getElementById("region"),
-  visits: document.getElementById("visits"),
-  runtime: document.getElementById("runtime"),
-  remaining: document.getElementById("remaining"),
-  startBtn: document.getElementById("startBtn"),
-  stopBtn: document.getElementById("stopBtn")
-};
+document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const runningEl = document.getElementById('running');
+  const lastQueryEl = document.getElementById('lastQuery');
+  const visitCountEl = document.getElementById('visitCount');
+  const timeLeftEl = document.getElementById('timeLeft');
+  const testModeChk = document.getElementById('testModeChk');
+  const openrouterChk = document.getElementById('openrouterChk');
+  const aiLabel = document.getElementById('aiLabel');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsImg = document.getElementById('settingsImg');
 
-function fmtMins(ms) {
-  if (!ms || ms < 0) return "0 мин";
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  if (m <= 0 && s > 0) return `${s} сек`;
-  return `${m} мин`;
-}
+  function openOptions() {
+    if (chrome.runtime.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    } else {
+      window.open(chrome.runtime.getURL('options.html'));
+    }
+  }
 
-async function readState() {
-  const { autoState } = await chrome.storage.local.get("autoState");
-  return autoState || {};
-}
+  startBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: "START" }, () => updateState());
+  });
+  stopBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: "STOP" }, () => updateState());
+  });
+  testModeChk.addEventListener('change', () => {
+    chrome.runtime.sendMessage({ type: "TOGGLE_TEST_MODE", value: testModeChk.checked }, () => updateState());
+  });
+  openrouterChk.addEventListener('change', () => {
+    const model = openrouterChk.checked ? "openrouter" : "google";
+    aiLabel.textContent = openrouterChk.checked ? "OpenRouter" : "Gemini";
+    chrome.runtime.sendMessage({ type: "SET_MODEL", value: model }, () => updateState());
+  });
 
-function render(state) {
-  const running = !!state.running;
-  els.status.textContent = running ? "Работает" : "Остановлено";
-  els.status.classList.toggle("running", running);
-  els.status.classList.toggle("stopped", !running);
+  // Открытие настроек по клику
+  settingsBtn.addEventListener('click', openOptions);
 
-  els.lastQuery.textContent = state.lastQuery || "—";
-  els.region.textContent = state.region || "—";
-  els.visits.textContent = String(state.visitCount || 0);
+  // Доступность: enter/space
+  settingsBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openOptions();
+    }
+  });
 
-  const now = Date.now();
-  const runtimeMs = state.startTime ? now - state.startTime : 0;
-  const remainingMs = state.sessionEndsAt ? Math.max(0, state.sessionEndsAt - now) : 0;
+  function msToTime(ms) {
+    if (!ms || ms <= 0) return "00:00";
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
 
-  els.runtime.textContent = fmtMins(runtimeMs);
-  els.remaining.textContent = fmtMins(remainingMs);
-}
+  function updateState() {
+    chrome.runtime.sendMessage({ type: "REQUEST_STATE" }, (resp) => {
+      const st = resp?.state;
+      if (!st) return;
+      runningEl.textContent = st.running ? "Запущен" : "Остановлен";
+      lastQueryEl.textContent = st.lastQuery || "—";
+      visitCountEl.textContent = st.visitCount || "0";
+      const left = st.sessionEndsAt ? Math.max(0, st.sessionEndsAt - Date.now()) : 0;
+      timeLeftEl.textContent = msToTime(left);
+      testModeChk.checked = !!st.testMode;
+      openrouterChk.checked = (st.model === "openrouter");
+      aiLabel.textContent = st.model === "openrouter" ? "OpenRouter" : "Gemini";
+    });
+  }
 
-async function refresh() {
-  const st = await readState();
-  render(st);
-}
+  // Если хочешь использовать локальный файл вместо внешней ссылки:
+  // settingsImg.src = chrome.runtime.getURL('images/gear.png');
 
-els.startBtn.addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "START" });
-  setTimeout(refresh, 300);
+  setInterval(updateState, 1000);
+  updateState();
 });
-
-els.stopBtn.addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({ type: "STOP" });
-  setTimeout(refresh, 300);
-});
-
-refresh();
-const timer = setInterval(refresh, 1000);
-window.addEventListener("unload", () => clearInterval(timer));
