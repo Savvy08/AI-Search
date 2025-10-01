@@ -1,262 +1,263 @@
-const API_KEY = "Ключ Gemeni API";
-const GOOGLE_SHEET_URL = "Сюда ссылку на Google Таблицу";
-const DWELL_MINUTES = 2;
-const SESSION_MINUTES = 30;
+// background.js
 
-let running = false;
-let startTime = null;
-let sessionEndsAt = null;
-let visitCount = 0;
-let dwellTimerId = null;
-let currentTabId = null;
-let regionCache = null;
-let recentQueries = [];
+// ======= Дефолтные ключи (fallback, если в настройках пусто) =======
+const GOOGLE_KEYS = [
+  "AIzaSyDCq46CoeWM_EZdqHKxTdk738G72qkP5nY",
+  "AIzaSyDpgtlngRN4ukrA-eYBp_EPGMgRCSAnUpQ",
+  "AIzaSyBAOFd4WNxCV7MOV-faah4moFVj7dfDgEs"
+];
+let googleKeyIndex = 0;
 
-async function updateUIState(partial) {
-  const defaults = {
-    running: false,
-    visitCount: 0,
-    startTime: null,
-    sessionEndsAt: null,
-    lastQuery: "",
-    region: "",
-    lastUpdate: Date.now()
-  };
-  const cur = (await chrome.storage.local.get("autoState")).autoState || {};
-  const next = { ...defaults, ...cur, ...partial, lastUpdate: Date.now() };
-  await chrome.storage.local.set({ autoState: next });
+const OPENROUTER_KEY = "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";
+
+// ======= Состояние =======
+let state = {
+  running: false,
+  testMode: false,
+  model: "google", // "google" или "openrouter"
+  lastQuery: "",
+  visitCount: 0,
+  visitedDomains: [],
+  currentTabId: null,
+  sessionStartedAt: null,
+  sessionEndsAt: null
+};
+
+function saveState() { chrome.storage.local.set({ ai_seq_state: state }); }
+async function loadState() {
+  const s = await chrome.storage.local.get("ai_seq_state");
+  if (s.ai_seq_state) state = s.ai_seq_state;
 }
+function log(...a) { console.log("[AI-SEQ]", ...a); }
 
-async function getLocationFromIP() {
-  if (regionCache) return regionCache;
-  try {
-    const res = await fetch("https://ipapi.co/json/");
-    const data = await res.json();
-    regionCache = {
-      ip: data.ip || "",
-      city: data.city || "",
-      region: data.region || "",
-      country: data.country_name || ""
-    };
-    return regionCache;
-  } catch {
-    regionCache = { ip: "", city: "", region: "", country: "" };
-    return regionCache;
-  }
-}
-
-async function enforceOnlyTab(keepTabId) {
-  try {
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    const toClose = tabs.filter(t => t.id !== keepTabId).map(t => t.id);
-    if (toClose.length) await chrome.tabs.remove(toClose);
-  } catch {}
-}
-
-function clearDwellTimer() {
-  if (dwellTimerId) {
-    clearTimeout(dwellTimerId);
-    dwellTimerId = null;
-  }
-}
-
-function uniqueQuery(text) {
-  const cleaned = text.trim().toLowerCase();
-  if (!cleaned || cleaned.length < 3) return false;
-  return !recentQueries.includes(cleaned);
-}
-
-function rememberQuery(q) {
-  const cleaned = q.trim().toLowerCase();
-  if (!cleaned) return;
-  recentQueries.unshift(cleaned);
-  if (recentQueries.length > 10) recentQueries.pop();
-}
-
-async function generateQuery() {
-  const loc = await getLocationFromIP();
-  const topicSeed = [
-    "местные новости", "погода", "спорт", "технологии",
-    "культура", "бизнес", "туризм", "образование",
-    "транспорт", "здравоохранение", "новые рестораны"
-  ];
-  const randomTopic = topicSeed[Math.floor(Math.random() * topicSeed.length)];
-
-  const prompt = [
-    `Сгенерируй один краткий поисковый запрос (до 6 слов) на русском, интересный для региона: ${loc.city || "ваш город"}, ${loc.country || "ваша страна"}.`,
-    `Тема для вдохновения: ${randomTopic}.`,
-    "Только сам запрос, без кавычек и пояснений."
-  ].join(" ");
-
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.95, maxOutputTokens: 24 }
-  };
-
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(API_KEY)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+// ======= Загрузка пользовательских настроек =======
+async function getUserSettings() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([
+      "geminiKey", "openrouterKey", "sessionDuration", "stepDelay", "fallbackQueries"
+    ], (data) => {
+      resolve({
+        geminiKey: data.geminiKey || null,
+        openrouterKey: data.openrouterKey || null,
+        sessionDuration: (data.sessionDuration || 30) * 60 * 1000, // мин в мс
+        stepDelay: (data.stepDelay || 120) * 1000, // сек в мс
+        fallbackQueries: data.fallbackQueries || []
+      });
     });
-
-    const data = await res.json();
-    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    text = text.trim().replace(/^["']|["']$/g, "").replace(/\n/g, " ").replace(/\s+/g, " ");
-
-    if (uniqueQuery(text)) {
-      rememberQuery(text);
-      return text;
-    }
-  } catch {}
-
-  const fallbackPool = [
-    `события ${loc.city || "в городе"}`,
-    `афиша ${loc.city || "город"}`,
-    `курсы валют ${loc.country || "страна"}`,
-    `транспорт ${loc.city || "город"} расписание`,
-    `новости ${loc.region || loc.country || "региона"}`,
-    `работа ${loc.city || "город"} вакансии`,
-    `погода ${loc.city || "город"} сегодня`,
-    `кафе ${loc.city || "город"} отзывы`,
-    `спорт ${loc.city || "город"} новости`,
-    `технологии ${loc.country || "страна"} тренды`
-  ];
-  let candidate = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
-  let tries = 0;
-  while (!uniqueQuery(candidate) && tries < 5) {
-    candidate = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
-    tries++;
-  }
-  rememberQuery(candidate);
-  return candidate;
-}
-
-async function sendToSheet() {
-  try {
-    const loc = await getLocationFromIP();
-    const runtimeMinutes = startTime ? Math.floor((Date.now() - startTime) / 60000) : 0;
-
-    const payload = {
-      ip: loc.ip || "",
-      visits: visitCount,
-      runtime: runtimeMinutes,
-      region: `${loc.city || ""}${loc.city ? ", " : ""}${loc.country || ""}`
-    };
-
-    await fetch(GOOGLE_SHEET_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  } catch {}
-}
-
-async function startCycle() {
-  if (!running) return;
-  if (Date.now() >= sessionEndsAt) {
-    await stopSession();
-    return;
-  }
-
-  clearDwellTimer();
-
-  let query;
-  try {
-    query = await generateQuery();
-  } catch {
-    query = "новости технологий";
-  }
-
-  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-  chrome.tabs.create({ url, active: true }, async (tab) => {
-    currentTabId = tab.id;
-    visitCount += 1;
-
-    await enforceOnlyTab(currentTabId);
-    const loc = await getLocationFromIP();
-    await updateUIState({
-      running: true,
-      visitCount,
-      startTime,
-      sessionEndsAt,
-      lastQuery: query,
-      region: `${loc.city || ""}${loc.city ? ", " : ""}${loc.country || ""}`
-    });
-
-    await sendToSheet();
-
-    // Фолбек: если контент-скрипт не ответит, продолжаем через 15 сек
-    dwellTimerId = setTimeout(() => {
-      if (running) startCycle();
-    }, 15000);
   });
 }
 
+// ======= Фоллбек запросы (дефолтный список) =======
+function fallbackQueryDefault() {
+  const arr = [
+    "погода сегодня", "снять квартиру москва", "новости спорта",
+    "новые технологии", "рецепт борща", "фильмы",
+    "история древнего рима", "музыкальные новинки", "курс доллара сегодня",
+    "афиша кино москва", "лучшие сериалы", "как научиться программировать",
+    "онлайн переводчик", "расписание поездов", "биткоин цена",
+    "стриминговые сервисы", "диета для похудения", "бесплатные онлайн курсы",
+    "кофейни рядом", "игры на пк", "новости политики",
+    "открыть свой бизнес", "туры в турцию", "йога для начинающих",
+    "мемы сегодня", "автомобили электрические", "подкасты про науку",
+    "как медитировать", "тренды", "лайфхаки для дома",
+    "книги фантастика", "стримы twitch", "здоровое питание",
+    "акции компаний", "искусственный интеллект", "путешествия бюджетные",
+    "музыка 90 х", "изучение английского", "косметика натуральная",
+    "новости кино", "психология отношений", "it вакансии",
+    "спортзалы рядом", "аниме новинки", "handmade идеи",
+    "купить ноутбук", "экскурсии онлайн", "котики видео",
+    "ремонт квартиры", "криптовалюты", "снять офис",
+    "садоводство для начинающих", "гитара уроки", "vr технологии",
+    "доставка еды", "велнес ретриты", "диджитал арт",
+    "языки программирования", "космос новости", "handmade рынки",
+    "финансовая грамотность", "кино фестивали", "домашние животные",
+    "стартапы идеи", "стрижка модная", "онлайн банкинг",
+    "экология проекты", "подкасты юмор"
+  ];
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ======= Запросы к моделям =======
+async function googleQuery(prompt) {
+  const settings = await getUserSettings();
+  const keys = settings.geminiKey ? [settings.geminiKey] : GOOGLE_KEYS;
+
+  for (let attempt = 0; attempt < keys.length; attempt++) {
+    const key = keys[googleKeyIndex];
+    googleKeyIndex = (googleKeyIndex + 1) % keys.length;
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const body = { contents: [{ parts: [{ text: prompt }] }] };
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      text = text.trim();
+      if (text) return text;
+    } catch (e) {
+      log("Google key failed:", e);
+    }
+  }
+  return "";
+}
+
+async function openrouterDeepseekQuery(prompt) {
+  try {
+    const settings = await getUserSettings();
+    const key = settings.openrouterKey || OPENROUTER_KEY;
+
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-chat-v3.1:free",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    if (!resp.ok) return "";
+    const data = await resp.json();
+    const text = data?.choices?.[0]?.message?.content || "";
+    return text.trim();
+  } catch (e) {
+    log("OpenRouter error:", e);
+    return "";
+  }
+}
+
+// ======= Универсальная генерация =======
+async function generateQueryViaAI() {
+  const prompt = `Ты — генератор поисковых запросов.
+Сгенерируй один уникальный короткий поисковый запрос на русском языке 
+на повседневную тему. Не добавляй пояснений, верни только сам запрос.`;
+
+  let query = "";
+  if (state.model === "google") query = await googleQuery(prompt);
+  else if (state.model === "openrouter") query = await openrouterDeepseekQuery(prompt);
+
+  if (!query || !query.trim()) {
+    const settings = await getUserSettings();
+    if (settings.fallbackQueries.length > 0) {
+      query = settings.fallbackQueries[
+        Math.floor(Math.random() * settings.fallbackQueries.length)
+      ];
+    } else {
+      query = fallbackQueryDefault();
+    }
+  }
+  return query.trim();
+}
+
+// ======= Логика переходов =======
+let dwellTimer = null;
+
+async function openSearchTab() {
+  if (!state.running) return;
+
+  if (state.currentTabId) {
+    try { chrome.tabs.remove(state.currentTabId); } catch (e) {}
+    state.currentTabId = null;
+  }
+
+  const q = await generateQueryViaAI();
+  state.lastQuery = q;
+  saveState();
+
+  const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  chrome.tabs.create({ url }, (tab) => {
+    state.currentTabId = tab.id;
+    saveState();
+  });
+}
+
+async function startDwellTimer() {
+  if (dwellTimer) clearTimeout(dwellTimer);
+  const settings = await getUserSettings();
+  const ms = state.testMode ? 10000 : settings.stepDelay;
+  dwellTimer = setTimeout(async () => {
+    if (Date.now() >= state.sessionEndsAt) {
+      stopSession();
+    } else {
+      await openSearchTab();
+    }
+  }, ms);
+}
+
+// ======= Управление сессией =======
 async function startSession() {
-  if (running) return;
-  running = true;
-  visitCount = 0;
-  startTime = Date.now();
-  sessionEndsAt = startTime + SESSION_MINUTES * 60 * 1000;
-  regionCache = null;
-  recentQueries = [];
+  if (state.running) return;
+  state.running = true;
+  state.visitCount = 0;
+  state.lastQuery = "";
+  state.sessionStartedAt = Date.now();
 
-  await updateUIState({
-    running: true,
-    visitCount,
-    startTime,
-    sessionEndsAt,
-    lastQuery: "",
-    region: ""
-  });
+  const settings = await getUserSettings();
+  state.sessionEndsAt = state.testMode
+    ? state.sessionStartedAt + 10 * 1000
+    : state.sessionStartedAt + settings.sessionDuration;
 
-  await startCycle();
+  saveState();
+  openSearchTab();
 }
 
-async function stopSession() {
-  running = false;
-  clearDwellTimer();
-  currentTabId = null;
-
-  await updateUIState({ running: false });
+function stopSession() {
+  state.running = false;
+  if (dwellTimer) clearTimeout(dwellTimer);
+  if (state.currentTabId) {
+    try { chrome.tabs.remove(state.currentTabId); } catch (e) {}
+    state.currentTabId = null;
+  }
+  saveState();
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  (async () => {
-    if (msg?.type === "START") {
-      await startSession();
-      sendResponse({ ok: true });
-    } else if (msg?.type === "STOP") {
-      await stopSession();
-      sendResponse({ ok: true });
-    } else if (msg?.type === "GET_STATE") {
-      const { autoState } = await chrome.storage.local.get("autoState");
-      sendResponse({ ok: true, state: autoState || {} });
-    } else if (msg?.type === "SITE_LOADED" && running) {
-      clearDwellTimer(); // сбрасываем фолбек
-      const msLeft = sessionEndsAt - Date.now();
-      const dwellMs = Math.max(0, Math.min(DWELL_MINUTES * 60 * 1000, msLeft));
-      dwellTimerId = setTimeout(() => {
-        if (running) startCycle();
-      }, dwellMs);
-    }
-  })();
+// ======= Сообщения =======
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "START") { startSession(); sendResponse({ ok: true }); }
+  else if (msg.type === "STOP") { stopSession(); sendResponse({ ok: true }); }
+  else if (msg.type === "TOGGLE_TEST_MODE") {
+    state.testMode = !!msg.value; saveState(); sendResponse({ testMode: state.testMode });
+  }
+  else if (msg.type === "SET_MODEL") {
+    if (msg.value === "google" || msg.value === "openrouter") {
+      state.model = msg.value; saveState(); sendResponse({ model: state.model });
+    } else sendResponse({ error: "unknown model" });
+  }
+  else if (msg.type === "REQUEST_STATE") { sendResponse({ state }); }
+
+  // навигация из content-google.js
+  else if (msg.type === "ORGANIC_LINKS") {
+    if (msg.links && msg.links.length > 0 && state.running) {
+      const choice = msg.links[Math.floor(Math.random() * msg.links.length)];
+      log("Навигация на сайт:", choice.href);
+      sendResponse({ action: "NAVIGATE", href: choice.href });
+    } else sendResponse({ action: "NONE" });
+  }
+
+  // сигнал от content-visit.js
+  else if (msg.type === "PAGE_VISITED") {
+    log("PAGE_VISITED:", msg.url);
+    state.visitedDomains.push(new URL(msg.url).hostname);
+    state.visitCount++;
+    saveState();
+    startDwellTimer(); // запускаем таймер после входа на сайт
+    sendResponse({ ok: true });
+  }
+
   return true;
 });
 
-chrome.runtime.onInstalled.addListener(async () => {
-  await updateUIState({
-    running: false,
-    visitCount: 0,
-    startTime: null,
-    sessionEndsAt: null,
-    lastQuery: "",
-    region: ""
-  });
+chrome.tabs.onRemoved.addListener((id) => {
+  if (id === state.currentTabId) {
+    state.currentTabId = null;
+    saveState();
+  }
 });
 
-chrome.runtime.onStartup.addListener(async () => {
-  const { autostart } = await chrome.storage.local.get("autostart");
-  if (autostart) await startSession();
-});
+loadState();
