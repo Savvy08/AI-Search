@@ -2,9 +2,9 @@
 
 // ======= Дефолтные ключи (fallback, если в настройках пусто) =======
 const GOOGLE_KEYS = [
-  "AIzaSyDCq46CoeWM_EZdqHKxTdk738G72qkP5nY",
-  "AIzaSyDpgtlngRN4ukrA-eYBp_EPGMgRCSAnUpQ",
-  "AIzaSyBAOFd4WNxCV7MOV-faah4moFVj7dfDgEs"
+  "API KEY GEMENI вписать сюда",
+  "API KEY GEMENI вписать сюда",
+  "API KEY GEMENI вписать сюда"
 ];
 let googleKeyIndex = 0;
 
