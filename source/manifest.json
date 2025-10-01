@@ -1,36 +1,48 @@
 {
   "manifest_version": 3,
-  "name": "ZapReq",
-  "version": "1.2.0",
-  "description": "Автопоиск и визиты на сайты с учётом региона по IP. Цикл 4 мин, сессия 30 мин, запись в Google Таблицу.",
+  "name": "AI Sequential Search",
+  "description": "ИИ генерирует запросы на русском",
+  "version": "2.1",
   "permissions": [
     "tabs",
     "storage",
-    "alarms"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "https://www.google.com/*",
-    "https://www.google.kz/*",
-    "https://ipapi.co/*",
-    "https://api.ipify.org/*",
-    "https://generativelanguage.googleapis.com/*",
-    "https://script.google.com/*"
+    "<all_urls>"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "ZapReq"
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://www.google.com/search*",
-        "https://www.google.kz/search*"
-      ],
+      "matches": ["https://www.google.com/search*"],
       "js": ["content-google.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-visit.js"],
+      "run_at": "document_idle"
     }
-  ]
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
 }
