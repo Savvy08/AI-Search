@@ -1,6 +1,8 @@
-# ZapReq
+# <img width="40" height="40" alt="Unknown" src="https://github.com/user-attachments/assets/22da31c1-36d3-493b-ac9f-6e09359362b1" />     ZapReq 
 
-<img width="300" height="300" alt="icon128" src="https://github.com/user-attachments/assets/397905f6-c63b-4907-870b-f799accbdc43" />
+
+
+<img width="1300" height="500" alt="Copilot_20250929_164921" src="https://github.com/user-attachments/assets/824cfdc6-546a-4690-bf02-dbf6c2c638d8" />
 
 
 Это расширение для браузера автоматизирует поисковые циклы, имитируя активность пользователя.
