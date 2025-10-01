@@ -1,39 +1,34 @@
 // content-google.js
 (function () {
-  function firstOrganicLink() {
-    const anchors = Array.from(document.querySelectorAll('a h3')).map(h3 => h3.closest('a'));
-    const organic = anchors.filter(a => {
-      const href = a?.href || "";
-      if (!href.startsWith("http")) return false;
-      try {
-        const u = new URL(href);
-        if (u.hostname.includes("google.")) return false;
-        return true;
-      } catch {
-        return false;
-      }
-    });
-    return organic[0] || null;
+  function collectLinks() {
+    const out = [];
+    // Ищем органические ссылки: <a><h3>...</h3></a>
+    const anchors = Array.from(document.querySelectorAll("a h3")).map(h3 => h3.closest("a"));
+    for (const a of anchors) {
+      if (!a || !a.href) continue;
+      if (a.href.includes("google.com")) continue; // пропускаем внутренние ссылки Google
+      out.push({ href: a.href });
+    }
+    return out;
   }
 
-  let attempts = 0;
-  function tryGo() {
-    const link = firstOrganicLink();
-    if (link) {
-      // Отправляем в background сигнал, что мы переходим
-      chrome.runtime.sendMessage({ type: "SITE_LOADED" });
-      window.location.href = link.href;
-      return;
-    }
-    attempts += 1;
-    if (attempts < 20) {
-      setTimeout(tryGo, 700); // ретраи до ~14 сек
-    }
+  function main() {
+    if (!location.pathname.includes("/search")) return;
+
+    const links = collectLinks();
+
+    // Отправляем в background и сразу ждём ответа
+    chrome.runtime.sendMessage({ type: "ORGANIC_LINKS", links }, (resp) => {
+      if (resp && resp.action === "NAVIGATE" && resp.href) {
+        console.log("[AI-SEQ] Навигация на:", resp.href);
+        window.location.href = resp.href;
+      }
+    });
   }
 
   if (document.readyState === "complete" || document.readyState === "interactive") {
-    setTimeout(tryGo, 600);
+    setTimeout(main, 500);
   } else {
-    window.addEventListener("DOMContentLoaded", () => setTimeout(tryGo, 600));
+    window.addEventListener("DOMContentLoaded", () => setTimeout(main, 500));
   }
 })();
