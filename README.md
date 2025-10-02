@@ -1,4 +1,4 @@
-# <img width="40" height="40" alt="Unknown" src="https://github.com/user-attachments/assets/22da31c1-36d3-493b-ac9f-6e09359362b1" />     ZapReq 
+# <img width="40" height="40" alt="Unknown" src="https://github.com/user-attachments/assets/22da31c1-36d3-493b-ac9f-6e09359362b1" />     AI Sequential Search 
 
 
 <img width="1021" height="290" alt="изображение" src="https://github.com/user-attachments/assets/bef70b06-6032-4867-890a-2b119ab29653" />
