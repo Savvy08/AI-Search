@@ -1,9 +1,10 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>AI Sequential Search</title>
-  <style>
+<meta charset="utf-8"/>
+<title></title>
+<style>
     body { font-family: Arial, sans-serif; width: 360px; padding: 12px; color: #111; }
     h2 { margin: 0 0 8px 0; font-size: 16px; }
     .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
@@ -26,41 +27,133 @@
 
     /* Немного подправим мобильную ширину кнопок */
     .row .settings-wrap { margin-left: auto; }
-  </style>
-</head>
+
+    /* ====== Стили для блока автоскролла ====== */
+  /* ====== Scroll area - в цвет темы расширения ====== */
+.scroll-area {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #2a2d36;
+  border: 1px solid #3a3e47;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scroll-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.scroll-row .label {
+  font-size: 13px;
+  color: #f5f6fa;
+  min-width: 90px;
+}
+
+.scroll-row input[type="range"] {
+  flex: 1;
+  accent-color: #2d8cff;
+}
+
+.scroll-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  border-top: 1px solid #3a3e47;
+  padding-top: 6px;
+}
+
+.small-btn {
+  background: #3a3e47;
+  border: 1px solid #4b4f59;
+  color: #f5f6fa;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.small-btn:hover {
+  background: #2d8cff;
+  border-color: #2d8cff;
+  color: #fff;
+}
+
+#scrollSpeedVal {
+  color: #ccc;
+  min-width: 34px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* Ползунок */
+.scroll-area input[type="range"]::-webkit-slider-thumb {
+  background-color: #2d8cff;
+  border-radius: 50%;
+}
+.scroll-area input[type="range"]::-webkit-slider-runnable-track {
+  background-color: #444857;
+}
+
+
+    /* в тёмной теме останется совместимо */
+</style>
+<link href="popup.css" rel="stylesheet"/></head>
 <body>
-  <h2>AI Sequential Search</h2>
-  <div class="row">
-    <button id="startBtn" class="primary">Start</button>
-    <button id="stopBtn">Stop</button>
-
-    <!-- Шестерёнка: заменена на ссылку, указанную тобой -->
-    <div class="settings-wrap">
-      <button id="settingsBtn" class="settings-btn" title="Настройки" aria-label="Открыть настройки">
-        <img id="settingsImg" src="https://images.icon-icons.com/1580/PNG/512/2849830-gear-interface-multimedia-options-setting-settings_107986.png" alt="Настройки">
-      </button>
-    </div>
+<h2>AI Sequential Search</h2>
+<div class="row">
+  <button class="primary" id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+  <!-- Шестерёнка: заменена на ссылку, указанную тобой -->
+  <div class="settings-wrap">
+    <button aria-label="Открыть настройки" class="settings-btn" id="settingsBtn" title="Настройки">Настройки</button>
   </div>
+</div>
+<div class="row" style="margin-top:6px;">
+  <label><input id="testModeChk" type="checkbox"/> Тест-режим (10 сек вместо 2 мин)</label>
+</div>
+<div class="row">
+  <label class="toggle">
+    <input id="openrouterChk" type="checkbox"/>
+    <span class="slider"></span>
+  </label>
+  <span class="ai-label" id="aiLabel">Gemini</span>
+</div>
+<div class="status">Статус: <strong id="running">Остановлен</strong></div>
+<div class="statbox">
+  <div class="meta">Последний запрос: <span id="lastQuery">—</span></div>
+  <div class="meta">Посещений: <span id="visitCount">0</span></div>
+  <div class="meta">Оставшееся время: <span id="timeLeft">00:00</span></div>
+</div>
 
-  <div class="row" style="margin-top:6px;">
-    <label><input type="checkbox" id="testModeChk"> Тест-режим (10 сек вместо 2 мин)</label>
-  </div>
-
-  <div class="row">
-    <label class="toggle">
-      <input type="checkbox" id="openrouterChk">
-      <span class="slider"></span>
+<!-- ======= Новый блок: автоскролл (минимально и аккуратно) ======= -->
+<div class="scroll-area" aria-label="Управление автоскроллом">
+  <div class="scroll-row">
+    <div class="label">Автоскролл</div>
+    <label style="display:flex;align-items:center;gap:6px;">
+      <input id="scrollToggle" type="checkbox"/>
+      <span style="font-size:13px;">Вкл/Выкл</span>
     </label>
-    <span class="ai-label" id="aiLabel">Gemini</span>
   </div>
 
-  <div class="status">Статус: <strong id="running">Остановлен</strong></div>
-  <div class="statbox">
-    <div class="meta">Последний запрос: <span id="lastQuery">—</span></div>
-    <div class="meta">Посещений: <span id="visitCount">0</span></div>
-    <div class="meta">Оставшееся время: <span id="timeLeft">00:00</span></div>
+  <div class="scroll-row">
+    <div class="label">Скорость</div>
+    <input id="scrollSpeed" type="range" min="1" max="50" value="3" />
+    <div style="min-width:34px;text-align:center;font-size:13px;" id="scrollSpeedVal">3</div>
   </div>
 
-  <script src="popup.js"></script>
+  <div class="scroll-controls">
+
+    <div style="margin-left:auto;font-size:12px;color:#666;">Scroll</div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
 </body>
 </html>
