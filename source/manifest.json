@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI Sequential Search",
-  "description": "ИИ генерирует запросы на русском",
-  "version": "2.1",
+  "description": "Посещение сайтов и генирация запросов",
+  "version": "2.1.2",
   "permissions": [
     "tabs",
     "storage",
@@ -29,7 +29,7 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
-  "content_scripts": [
+    "content_scripts": [
     {
       "matches": ["https://www.google.com/search*"],
       "js": ["content-google.js"],
@@ -38,6 +38,11 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content-visit.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scroll.js"],
       "run_at": "document_idle"
     }
   ],
