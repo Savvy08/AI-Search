@@ -1,6 +1,22 @@
-#### AI Sequential Search Chrome Extension 2.0:
+#### AI Sequential Search Chrome Extension 2.1:
 ----------------
+10.11.25 version 2.1.3
 
+Added:
+* Заменил setTimeout на chrome.alarms - теперь работает с любыми таймерами
+* Добавил режим "только фоллбек-запросы" с чекбоксом
+  
+Fixed:
+* Улучшил логирование для отладки
+* Улушчил код - 20.10.25 version 2.1.2
+
+Added:
+* Добавлен скролл в UI-меню - 20.10.25 version 2.1.2
+
+
+
+
+---
 02.10.25 version 2.1.1
 
 
